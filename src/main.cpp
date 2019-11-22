@@ -16,12 +16,22 @@
 #include <boost/program_options.hpp>
 //#include <omp.h>
 
-int check_states(const std::vector<std::size_t> A, const std::string str_A,
-                 const std::vector<std::size_t> B, const std::string str_B,
-                 const std::vector<std::size_t> C, const std::string str_C,
-                 const std::size_t no_of_states)
+//! check if states in A are legit
+bool check_states(const std::vector<std::size_t> A, const std::string str_A,
+                  const std::vector<std::size_t> B, const std::string str_B,
+                  const std::vector<std::size_t> C, const std::string str_C,
+                  const std::size_t no_of_states)
 {
-    int e = 0;
+    return (check_states_A(A, str_A, B, str_B, C, str_C, no_of_states) &
+            check_states_A(B, str_B, A, str_A, C, str_C, no_of_states) &
+            check_states_A(C, str_C, A, str_A, B, str_B, no_of_states));
+}
+
+bool check_states_A(const std::vector<std::size_t> A, const std::string str_A,
+                    const std::vector<std::size_t> B, const std::string str_B,
+                    const std::vector<std::size_t> C, const std::string str_C,
+                    const std::size_t no_of_states)
+{
     // check if all values are legal and unique
     for (auto &state : A) {
         // because of size_t < 0 is not possible
@@ -29,18 +39,18 @@ int check_states(const std::vector<std::size_t> A, const std::string str_A,
             std::cout << "    ERROR: state " << int(state)+1
                       << " in " << str_A << " is larger/smaller than matrix"
                       << std::endl;
-            e = 1;
+            return false;
         }
         // check if A has overlap with B or C
         if (std::count(B.begin(), B.end(), state)) {
             std::cout << "    ERROR: state " << state+1
                       << " is in " << str_A << " and " << str_B << std::endl;
-            e = 1;
+            return false;
         }
         if (std::count(C.begin(), C.end(), state)) {
             std::cout << "    ERROR: state " << state+1
                       << " is in " << str_A << " and " << str_C << std::endl;
-            e = 1;
+            return false;
         }
     }
 
@@ -48,12 +58,11 @@ int check_states(const std::vector<std::size_t> A, const std::string str_A,
     if (!(it_A == A.end())) {
         std::cout << "    ERROR: state " << int(*it_A)+1
                   << " in " << str_A << " is not unique" << std::endl;
-        e = 1;
+        return false;
     }
 
-    return e;
+    return true;
 }
-
 
 //! MAIN ROUTINE
 int main(int argc, char* argv[]){
@@ -241,7 +250,7 @@ int main(int argc, char* argv[]){
             val -= 1;
         }
     }
-    // sort check_states
+    // sort states
     std::sort(A.begin(), A.end());
     std::sort(B.begin(), B.end());
     std::sort(C.begin(), C.end());
@@ -294,11 +303,11 @@ int main(int argc, char* argv[]){
     Transition_matrix T(file_name, keep_diag);
 
     // check states
-    int e=0;
-    e += check_states(A, "states-from", B, "states-to", C, "states-forbidden", T.get_no_of_states());
-    e += check_states(B, "states-to", A, "states-from", C, "states-forbidden", T.get_no_of_states());
-    e += check_states(C, "states-forbidden", A, "states-from", B, "states-to", T.get_no_of_states());
-    if (e==0) {
+    bool legit_states = check_states(A, "states-from",
+                                     B, "states-to",
+                                     C, "states-forbidden",
+                                     T.get_no_of_states());
+    if (legit_states) {
         std::cout << "    from: ";
         for (auto &val : A) {
             std::cout << val+1 << " ";
