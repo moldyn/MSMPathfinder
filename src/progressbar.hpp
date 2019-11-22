@@ -24,10 +24,10 @@ class Progressbar {
 
 //    private:
         // variables
-        std::size_t max_step;       // maximal number of steps
+        std::size_t max_step;      // maximal number of steps
         std::string preface;
-        int progress;       // in permill
-        std::size_t current_step;   // current position
+        int progress;              // in precision
+        std::size_t current_step;  // current position
         double precision = 1000.;  // 100. = 1%, 1000. = 0.1% and so on
 
         // times
