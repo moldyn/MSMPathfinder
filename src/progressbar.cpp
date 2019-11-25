@@ -20,9 +20,9 @@ Progressbar::Progressbar(const std::size_t max_step, const std::size_t state)
     this->hide_cursor();
     std::ostringstream preface_ostring;
     preface_ostring << "state " << std::setw(3) << state;
-    preface = preface_ostring.str();
+    this->preface = preface_ostring.str();
 
-    t_start = std::chrono::steady_clock::now();
+    this->t_start = std::chrono::steady_clock::now();
     this->_print_progress();
 }
 
@@ -33,10 +33,15 @@ Progressbar::~Progressbar()
 }
 
 void Progressbar::next() {
-    current_step++;
-    if (this->precision*current_step/max_step >= (unsigned) progress + 1) {
-        progress = this->precision*current_step/max_step;
-        t_curr = std::chrono::steady_clock::now();
+    this->current_step++;
+    if (this->precision*this->current_step/this->max_step >= (unsigned) this->progress + 1) {
+        this->t_curr = std::chrono::steady_clock::now();
+        // if refreshing rate faster than 1/200ms reduce the precision.
+        if ((this->progress == 0) && (this->_get_ET_in_ms() < 200)) {
+            this->precision /= 10.;
+            this->progress = 0;
+        }
+        this->progress = this->precision*this->current_step/this->max_step;
         this->_print_progress();
     }
     return;
@@ -55,7 +60,7 @@ void Progressbar::_print_progress(){
     }
     {
         std::cout << "] "
-                  << std::fixed << std::setprecision(1) << std::setw(5) << progress/10.
+                  << std::fixed << std::setprecision(1) << std::setw(5) << progress*100./this->precision
                   << " %";
         std::cout << std::setprecision(-1);
     }
@@ -71,14 +76,19 @@ void Progressbar::_print_progress(){
 int Progressbar::_get_ETA_in_second(){
     int t_curr = std::chrono::duration_cast<std::chrono::milliseconds>(this->t_curr -
                                                                        this->t_start).count();
-    int remaining = this->precision - progress;
-    return t_curr*remaining/(this->precision*progress);
-
+    float remaining = (1. - this->progress/this->precision);
+    return (t_curr/(1000*this->progress/this->precision))*remaining;
 }
 
 int Progressbar::_get_ET_in_second(){
     int t_elapsed = std::chrono::duration_cast<std::chrono::seconds>(this->t_curr -
                                                                      this->t_start).count();
+    return t_elapsed;
+}
+
+float Progressbar::_get_ET_in_ms(){
+    float t_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(this->t_curr -
+                                                                            this->t_start).count();
     return t_elapsed;
 }
 

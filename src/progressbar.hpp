@@ -28,7 +28,7 @@ class Progressbar {
         std::string preface;
         int progress;              // in precision
         std::size_t current_step;  // current position
-        double precision = 1000.;  // 100. = 1%, 1000. = 0.1% and so on
+        double precision = 1000000.;  // 100. = 1%, 1000. = 0.1% and so on
 
         // times
         std::chrono::steady_clock::time_point t_start, t_curr;
@@ -38,6 +38,8 @@ class Progressbar {
         int _get_ETA_in_second();
         //! return elapsed time in seconds
         int _get_ET_in_second();
+        //! return elapsed time in milliseconds
+        float _get_ET_in_ms();
         std::string _print_time(int);
 
         void hide_cursor(){std::cout << "\e[?25l";}
