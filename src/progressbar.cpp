@@ -59,9 +59,13 @@ void Progressbar::_print_progress(){
         else std::cout << "-";
     }
     {
-        std::cout << "] "
-                  << std::fixed << std::setprecision(1) << std::setw(5) << progress*100./this->precision
-                  << " %";
+        std::cout << "] ";
+        if (this->precision >= 1000) {
+            std::cout << std::fixed << std::setprecision(1) << std::setw(5) << progress*100./this->precision;
+        } else {
+            std::cout << std::fixed << std::setprecision(0) << std::setw(3) << progress*100./this->precision;
+        }
+        std::cout << " %";
         std::cout << std::setprecision(-1);
     }
     if ((progress > 0) && (progress < this->precision)){
