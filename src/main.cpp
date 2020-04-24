@@ -17,20 +17,20 @@
 //#include <omp.h>
 
 //! check if states in A are legit
-bool check_states(const std::vector<std::size_t> A, const std::string str_A,
-                  const std::vector<std::size_t> B, const std::string str_B,
-                  const std::vector<std::size_t> C, const std::string str_C,
-                  const std::size_t no_of_states)
+bool check_states(const std::vector<State> A, const std::string str_A,
+                  const std::vector<State> B, const std::string str_B,
+                  const std::vector<State> C, const std::string str_C,
+                  const State no_of_states)
 {
     return (check_states_A(A, str_A, B, str_B, C, str_C, no_of_states) &
             check_states_A(B, str_B, A, str_A, C, str_C, no_of_states) &
             check_states_A(C, str_C, A, str_A, B, str_B, no_of_states));
 }
 
-bool check_states_A(const std::vector<std::size_t> A, const std::string str_A,
-                    const std::vector<std::size_t> B, const std::string str_B,
-                    const std::vector<std::size_t> C, const std::string str_C,
-                    const std::size_t no_of_states)
+bool check_states_A(const std::vector<State> A, const std::string str_A,
+                    const std::vector<State> B, const std::string str_B,
+                    const std::vector<State> C, const std::string str_C,
+                    const State no_of_states)
 {
     // check if all values are legal and unique
     for (auto &state : A) {
@@ -155,11 +155,11 @@ int main(int argc, char* argv[]){
         ("help,h", b_po::bool_switch()->default_value(false), "show this help.")
         ("input-file,i", b_po::value<std::string>()->required(),
          "input (required): transition matrix (multi-column ASCII, row normalized).")
-        ("states-from,f", b_po::value<std::vector<std::size_t>>()->multitoken()->required(),
+        ("states-from,f", b_po::value<std::vector<State>>()->multitoken()->required(),
          "parameter: list of states (one-indexed) where pathways starts from.")
-        ("states-to,t", b_po::value<std::vector<std::size_t>>()->multitoken()->required(),
+        ("states-to,t", b_po::value<std::vector<State>>()->multitoken()->required(),
          "parameter: list of states (one-indexed) where pathways ends.")
-        ("states-forbidden", b_po::value<std::vector<std::size_t>>()->multitoken(),
+        ("states-forbidden", b_po::value<std::vector<State>>()->multitoken(),
          "parameter: list of states (one-indexed) which pathways should not enter.")
         ("steps", b_po::value<std::size_t>(),
          "parameter: number of steps which a transition can be maximal long.")
@@ -231,11 +231,11 @@ int main(int argc, char* argv[]){
         output = "not specified! only first 50 pathways are printed on console";
     }
     std::string file_name = args["input-file"].as<std::string>();
-    std::vector<std::size_t> A = args["states-from"].as<std::vector<std::size_t>>();
-    std::vector<std::size_t> B = args["states-to"].as<std::vector<std::size_t>>();
-    std::vector<std::size_t> C;
+    std::vector<State> A = args["states-from"].as<std::vector<State>>();
+    std::vector<State> B = args["states-to"].as<std::vector<State>>();
+    std::vector<State> C;
     if (args.count("states-forbidden")) {
-        C = args["states-forbidden"].as<std::vector<std::size_t>>();
+        C = args["states-forbidden"].as<std::vector<State>>();
     }
 
     // shift one-based states to zero based
@@ -262,18 +262,9 @@ int main(int argc, char* argv[]){
               << "          ~~~ Markov State Model PATHFINDER ~~~\n"
               << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
               << "\n~~~ Input parameters:\n"
-//              << "    precision: " << prec << "\n"
-//              << "    precision weight: " << prec_weight << "\n"
               << "    output: " << output << "\n"
               << std::endl;
-    /*
-    std::cout << "~~~ shift input states by -1" << std::endl;
-    for (auto &state: A) {
-        state -= 1.;
-    }
-    for (auto &state: B) {
-        state -= 1.;
-    }*/
+
     // read transition matrix from file
     // TODO: remove steps and iterations values to input default values
     std::size_t steps = 0;
@@ -323,12 +314,10 @@ int main(int argc, char* argv[]){
             }
         }
         std::cout << std::endl;
-
     } else {
         std::cout << "    ERROR: Bad selection of states." << std::endl;
         std::exit(EXIT_FAILURE);
     }
-
 
     // call main routine
     run_paths(mode, A, B, C, cut_off, steps, iterations, total_steps, T, output, threshold, argc, argv);

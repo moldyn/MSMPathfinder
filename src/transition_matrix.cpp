@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include "main.hpp"
 #include "transition_matrix.hpp"
 
 #include <cmath>
@@ -38,7 +39,7 @@ Transition_matrix::Transition_matrix(const std::string& filename,
     this->transition_matrix_input = T;
 
     // check if quadratic
-    this->no_of_states = (std::size_t) sqrt(T.size());
+    this->no_of_states = (State) sqrt(T.size());
     if (this->no_of_states != sqrt(T.size())) {
         std::cerr << "    ERROR: Marix is not quadratic" << std::endl;
         std::exit(EXIT_FAILURE);
@@ -51,9 +52,9 @@ Transition_matrix::Transition_matrix(const std::string& filename,
     // check if normalized
     std::cout << "    normalize matrix" << std::endl;
     double sum;
-    for (std::size_t i=0; i<this->no_of_states; ++i) {
+    for (State i=0; i<this->no_of_states; ++i) {
         sum = 0.;
-        for (std::size_t j=0; j<this->no_of_states; ++j) {
+        for (State j=0; j<this->no_of_states; ++j) {
             sum += this->get_Tij(i, j, true);
 //            this->accumulated_T[this->no_of_states*i + j] = sum;
         }
@@ -61,7 +62,7 @@ Transition_matrix::Transition_matrix(const std::string& filename,
 //            std::cerr << "   row " << i << " is not normalized with "
 //                      << sum << std::endl;
             // normalize
-            for (std::size_t j=0; j<this->no_of_states; ++j) {
+            for (State j=0; j<this->no_of_states; ++j) {
                 this->set_Tij(i, j,  this->get_Tij(i, j, true)/ sum, true);
 //                this->accumulated_T[this->no_of_states*i + j] /= sum;
             }
@@ -81,10 +82,10 @@ Transition_matrix::Transition_matrix(const std::string& filename,
     this->accumulated_T_input = T;
     this->timescale_matrix = T;
     double sum_input;
-    for (std::size_t i=0; i<this->no_of_states; ++i) {
+    for (State i=0; i<this->no_of_states; ++i) {
         sum = 0.;
         sum_input = 0.;
-        for (std::size_t j=0; j<this->no_of_states; ++j) {
+        for (State j=0; j<this->no_of_states; ++j) {
             // fill accumulated matrices
             sum += this->get_Tij(i, j, false);
             sum_input += this->get_Tij(i, j, true);
@@ -124,14 +125,14 @@ Transition_matrix::Transition_matrix(const Transition_matrix& T)
 // Destructor
 Transition_matrix::~Transition_matrix() {}
 
-float Transition_matrix::get_Tij(const std::size_t i,
-                                 const std::size_t j)
+float Transition_matrix::get_Tij(const State i,
+                                 const State j)
 {
     return this->get_Tij(i, j, this->keep_diag);
 }
 
-float Transition_matrix::get_Tij(const std::size_t i,
-                                 const std::size_t j,
+float Transition_matrix::get_Tij(const State i,
+                                 const State j,
                                  const bool keep_diag)
 {
     std::vector<double>* T;
@@ -153,14 +154,14 @@ float Transition_matrix::get_Tij(const std::size_t i,
 
 
 //TODO: modify Tij diagonal and accumulated aswell
-void Transition_matrix::set_Tij(const std::size_t i,
-                                const std::size_t j,
+void Transition_matrix::set_Tij(const State i,
+                                const State j,
                                 const float val)
 {
     return this->set_Tij(i, j, val, this->keep_diag);
 }
-void Transition_matrix::set_Tij(const std::size_t i,
-                                const std::size_t j,
+void Transition_matrix::set_Tij(const State i,
+                                const State j,
                                 const float val,
                                 const bool keep_diag)
 {
@@ -180,14 +181,14 @@ void Transition_matrix::set_Tij(const std::size_t i,
     }
 }
 
-std::size_t Transition_matrix::get_mcmc(const std::size_t i,
-                                        const double rand)
+State Transition_matrix::get_mcmc(const State i,
+                                  const double rand)
 {
     return this->get_mcmc(i, rand, this->keep_diag);
 }
-std::size_t Transition_matrix::get_mcmc(const std::size_t i,
-                                        const double rand,
-                                        const bool keep_diag)
+State Transition_matrix::get_mcmc(const State i,
+                                  const double rand,
+                                  const bool keep_diag)
 {
     std::vector<double>* T_acc;
     if (keep_diag) {
@@ -201,7 +202,7 @@ std::size_t Transition_matrix::get_mcmc(const std::size_t i,
                   << " i=" << i << std::endl;
         std::exit(EXIT_FAILURE);
     }
-    for (std::size_t j=0; j<this->no_of_states; ++j) {
+    for (State j=0; j<this->no_of_states; ++j) {
         if ((*T_acc)[this->no_of_states*i + j] > rand) {
             return j;
         }
@@ -209,7 +210,7 @@ std::size_t Transition_matrix::get_mcmc(const std::size_t i,
     // catch error if rand=1, this is due to float precision, see
     // http://open-std.org/JTC1/SC22/WG21/docs/lwg-active.html#2524
     // find highest transition rate which
-    for (std::size_t j=this->no_of_states-1; j>1; --j) {
+    for (State j=this->no_of_states-1; j>1; --j) {
         if ((*T_acc)[this->no_of_states*i + j] >
             (*T_acc)[this->no_of_states*i + j - 1]) {
             return j;
@@ -218,7 +219,7 @@ std::size_t Transition_matrix::get_mcmc(const std::size_t i,
     return 0;
 }
 
-double Transition_matrix::get_tauij(const std::size_t i, const std::size_t j)
+double Transition_matrix::get_tauij(const State i, const State j)
 {
     if (i < this->no_of_states && j < this->no_of_states) {
         return this->timescale_matrix[this->no_of_states*i + j];
@@ -233,10 +234,10 @@ double Transition_matrix::get_tauij(const std::size_t i, const std::size_t j)
 void Transition_matrix::remove_self_transition_rate()
 {
     float sum = 0.;
-    for (std::size_t i=0; i<this->no_of_states; ++i) {
+    for (State i=0; i<this->no_of_states; ++i) {
         sum = 1.-this->get_Tij(i, i, true);
 
-        for (std::size_t j=0; j<this->no_of_states; ++j) {
+        for (State j=0; j<this->no_of_states; ++j) {
             if (i!=j) {
                 this->set_Tij(i, j, this->get_Tij(i, j, true)/sum, false);
             } else {
@@ -259,7 +260,7 @@ void Transition_matrix::clear()
     return;
 }
 
-std::size_t Transition_matrix::get_no_of_states()
+State Transition_matrix::get_no_of_states()
 {
     return this->no_of_states;
 }

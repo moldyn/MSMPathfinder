@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include "paths.hpp"
 #include "main.hpp"
@@ -17,9 +18,9 @@
 //! Get paths from all states a in A to B
 void generate_pathfinders(const Mode mode,
                           Pathfinder_map &pathfinders,
-                          const std::vector<std::size_t> &A,
-                          const std::vector<std::size_t> &B,
-                          const std::vector<std::size_t> &C,
+                          const std::vector<State> &A,
+                          const std::vector<State> &B,
+                          const std::vector<State> &C,
                           const Transition_matrix &T,
                           const std::size_t steps,
                           const std::size_t total_steps,
@@ -29,7 +30,7 @@ void generate_pathfinders(const Mode mode,
                           const bool isWeight,
                           const bool normalize){
     // set up all pathfinders to be propagated
-    for(std::vector<std::size_t>::size_type i=0; i != A.size(); i++) {
+    for(std::vector<State>::size_type i=0; i != A.size(); i++) {
         // generate mode specific class
         switch(mode){
             case PATHS:
@@ -74,9 +75,9 @@ void generate_pathfinders(const Mode mode,
 
 //! MAIN ROUTINE
 int run_paths(Mode mode,
-              std::vector<std::size_t> A,
-              std::vector<std::size_t> B,
-              std::vector<std::size_t> C,
+              std::vector<State> A,
+              std::vector<State> B,
+              std::vector<State> C,
               double cut_off,
               std::size_t steps,
               std::size_t iterations,
@@ -209,7 +210,7 @@ int run_paths(Mode mode,
 
             // set weights_B to zero
             for (const auto &state_weight: weights_B){
-                weights_B[state_weight.first] = 0;
+                weights_B[state_weight.first] = 0.;
             }
 
             // find weights_B for probability weights_A to start in A
@@ -224,7 +225,7 @@ int run_paths(Mode mode,
 
             // set weights_A to zero
             for (const auto &state_weight: weights_A){
-                weights_A[state_weight.first] = 0;
+                weights_A[state_weight.first] = 0.;
             }
 
 
@@ -239,7 +240,7 @@ int run_paths(Mode mode,
             }
 
             // normalize weight
-            double sum = 0;
+            double sum = 0.;
             for (const auto &state: A) {
                 sum += weights_A[state];
             }
@@ -270,7 +271,7 @@ int run_paths(Mode mode,
 
     } else {
         for (const auto &pathfinder_tuple: pathfinders_from_A) {
-            weights_A[pathfinder_tuple.first] = 1;
+            weights_A[pathfinder_tuple.first] = 1.;
         }
     }
 
@@ -320,6 +321,8 @@ int run_paths(Mode mode,
             pathfinder_tuple.second->propagated_steps;
         paths_result->minor_pathways +=
             pathfinder_tuple.second->minor_pathways*weights_A[pathfinder_tuple.first];
+        paths_result->minor_pathways_wt +=
+            pathfinder_tuple.second->minor_pathways*pathfinder_tuple.second->minor_pathways_wt*weights_A[pathfinder_tuple.first];
         paths_result->missed_final +=
             pathfinder_tuple.second->missed_final*weights_A[pathfinder_tuple.first];
         paths_result->propagated_pathways +=
@@ -368,7 +371,8 @@ int run_paths(Mode mode,
 
         std::cout << "\n\n~~~ save output" << std::endl;
         std::ofstream output_file (output);
-        output_file << std::fixed;
+        output_file << std::fixed
+                    << std::setprecision(10);
         if (output_file.is_open()) {
             Paths_sorted::reverse_iterator it_r;
         	it_r = final_paths_sorted.rbegin();
@@ -396,17 +400,21 @@ int run_paths(Mode mode,
             }
   	        output_file << "# minor pathways [%]: "
                         << 100*paths_result->minor_pathways << "\n"
+                        << "# minor pathways wt [t_lag]: "
+                        << paths_result->minor_pathways_wt << "\n"
                         << "# missed pathways [%]: "
                         << paths_result->missed_final << "\n"
                         << "# number of propagated steps: "
                         << paths_result->propagated_steps << "\n"
                         << "# propagated pathways: "
                         << paths_result->propagated_pathways << "\n"
+                        << "# waiting time [t_lag]: "
+                        << paths_result->waiting_time() << "\n"
                         << "# number of different pathways: "
                         << paths_result->paths.size() << "\n"
                         << "# elapsed time [s]: "
                         << t_elapsed << "\n"
-        	            << "# count [%]  total [%] time [steps] pathway\n";
+        	            << "# count [%]  total [%] time [t_lag] pathway\n";
             for (; it_r != final_paths_sorted.rend(); it_r++){
 
                 if (first == -1) {

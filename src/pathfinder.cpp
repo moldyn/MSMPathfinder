@@ -1,4 +1,5 @@
 #include <iostream>
+#include "main.hpp"
 #include "pathfinder.hpp"
 
 #include <cmath>
@@ -12,23 +13,23 @@ Pathfinder_tauij::Pathfinder_tauij() {}
 
 // Overloaded constructor
 Pathfinder::Pathfinder(const Transition_matrix& T,
-                       const std::vector<std::size_t> &A,
-                       const std::vector<std::size_t> &B,
-                       const std::vector<std::size_t> &C,
-                       const std::size_t state_from,
+                       const std::vector<State> &A,
+                       const std::vector<State> &B,
+                       const std::vector<State> &C,
+                       const State state_from,
                        const std::size_t steps,
                        const std::size_t threshold,
                        const bool isWeight)
-    : minor_pathways(0.), forbidden_pathways(0.), A(A), B(B), C(C),
-      state_from(state_from), T(T), steps(steps), threshold(threshold),
-      isWeight(isWeight), propagated_steps(0.), propagated_pathways(0),
-      missed_final(0.)
+    : minor_pathways(0.), minor_pathways_wt(0.), forbidden_pathways(0.),
+      A(A), B(B), C(C), state_from(state_from), T(T), steps(steps),
+      threshold(threshold), isWeight(isWeight), propagated_steps(0.),
+      propagated_pathways(0), missed_final(0.)
 {}
 Mcmc::Mcmc(const Transition_matrix& T,
-           const std::vector<std::size_t> &A,
-           const std::vector<std::size_t> &B,
-           const std::vector<std::size_t> &C,
-           const std::size_t state_from,
+           const std::vector<State> &A,
+           const std::vector<State> &B,
+           const std::vector<State> &C,
+           const State state_from,
            const std::size_t steps,
            const std::size_t threshold,
            const bool isWeight,
@@ -37,10 +38,10 @@ Mcmc::Mcmc(const Transition_matrix& T,
       runs(runs)
 {}
 Mcmc_single::Mcmc_single(const Transition_matrix& T,
-                         const std::vector<std::size_t> &A,
-                         const std::vector<std::size_t> &B,
-                         const std::vector<std::size_t> &C,
-                         const std::size_t state_from,
+                         const std::vector<State> &A,
+                         const std::vector<State> &B,
+                         const std::vector<State> &C,
+                         const State state_from,
                          const std::size_t steps,
                          const std::size_t threshold,
                          const bool isWeight,
@@ -49,10 +50,10 @@ Mcmc_single::Mcmc_single(const Transition_matrix& T,
       total_steps(total_steps), stay_in_forbidden_region(0.)
 {}
 Pathfinder_tauij::Pathfinder_tauij(const Transition_matrix& T,
-                                   const std::vector<std::size_t> &A,
-                                   const std::vector<std::size_t> &B,
-                                   const std::vector<std::size_t> &C,
-                                   const std::size_t state_from,
+                                   const std::vector<State> &A,
+                                   const std::vector<State> &B,
+                                   const std::vector<State> &C,
+                                   const State state_from,
                                    const std::size_t steps,
                                    const std::size_t threshold,
                                    const bool isWeight,
@@ -66,6 +67,7 @@ Pathfinder::Pathfinder(const Pathfinder& pathfinder)
     : paths(pathfinder.paths),
       mean_wt(pathfinder.mean_wt),
       minor_pathways(pathfinder.minor_pathways),
+      minor_pathways_wt(pathfinder.minor_pathways_wt),
       forbidden_pathways(pathfinder.forbidden_pathways),
       A(pathfinder.A),
       B(pathfinder.B),
@@ -100,7 +102,7 @@ Pathfinder_tauij::~Pathfinder_tauij() {}
 void Mcmc::propagate_path()
 {
     // allocate memory for path initialize it
-    std::vector<size_t> path;
+    std::vector<State> path;
     if (this->steps > 1000) {  // maximal length of reserved storage
         path.reserve(1000);
     } else {
@@ -115,7 +117,7 @@ void Mcmc::propagate_path()
     Progressbar eta_bar(this->runs, this->state_from+1);
     for (std::size_t run=0; run<this->runs; ++run) {
         path.clear();  // reset path
-        std::size_t next_state = this->state_from;
+        State next_state = this->state_from;
         path.push_back(next_state);
         for(std::size_t step=0; step<this->steps; ++step) {
             rand = dis(gen);
@@ -173,7 +175,7 @@ void Mcmc::propagate_path()
 void Mcmc_single::propagate_path()
 {
     // allocate memory for path initialize it
-    std::vector<size_t> path;
+    std::vector<State> path;
     if (this->steps > 1000) {  // maximal length of reserved storage
         path.reserve(1000);
     } else {
@@ -188,7 +190,7 @@ void Mcmc_single::propagate_path()
 
     bool propagating_forward = true;  // always starting in A
 
-    std::size_t next_state = this->state_from;
+    State next_state = this->state_from;
     path.push_back(next_state);
     std::size_t step_started = 0;
 
@@ -213,8 +215,8 @@ void Mcmc_single::propagate_path()
             // if path is too long, throw it as well
             if (propagating_forward) {
                 if (step-step_started <= this->steps) {
-                    this->add_path(path, 1., -1); // this->threshold);
-                    this->add_time(path, 1., step-step_started, -1); //this->threshold);
+                    this->add_path(path, 1., this->threshold);
+                    this->add_time(path, 1., step-step_started, this->threshold); // ;-1);
                     this->propagated_pathways++;
                     propagating_forward = false;
                 } else {
@@ -253,7 +255,7 @@ void Mcmc_single::propagate_path()
 void Pathfinder_tauij::propagate_path()
 {
    // allocate memory for path initialize it
-    std::vector<size_t> path;
+    std::vector<State> path;
     if (this->steps > 1000) {  // maximal length of reserved storage
         path.reserve(1000);
     } else {
@@ -261,7 +263,7 @@ void Pathfinder_tauij::propagate_path()
     }
     Pathfinder pathfinder_curr, pathfinder_prev;
 
-    std::size_t current_state=this->state_from;
+    State current_state=this->state_from;
     double prob = 1.;
     path.push_back(this->state_from);
 
@@ -302,8 +304,12 @@ void Pathfinder_tauij::propagate_path()
                             this->add_path(path, prob, -1); //this->threshold);
                             this->add_time(path, prob, step+1, -1); //this->threshold);
                             this->propagated_pathways++;
+//                        } else if (pathfinder_curr.paths.size() > this->threshold) {
+//                            // add to minor pathways
+//                            this->minor_pathways += prob;
+//                            this->minor_pathways_wt += prob*(step+1);
                         } else {
-                            pathfinder_curr.add_path(path, prob, this->threshold);
+                            pathfinder_curr.add_path(path, prob, -1); //this->threshold);
                         }
                     }
                 } else {
@@ -331,11 +337,25 @@ void Pathfinder_tauij::propagate_path()
     return;
 }
 
+
+double Pathfinder::waiting_time()
+{
+    double wt = 0.;
+    for (auto& path : this->mean_wt) {
+        wt += path.second*this->paths[path.first];
+    }
+    wt += this->minor_pathways_wt*this->minor_pathways;
+    return wt;
+}
+
 void Pathfinder::normalize_times()
 {
     // normalize waiting times
     for (auto& path : this->mean_wt) {
         path.second /= this->paths[path.first];
+    }
+    if (this->minor_pathways > 0) {
+        this->minor_pathways_wt /= this->minor_pathways;
     }
     return;
 }
@@ -362,12 +382,11 @@ void Pathfinder::normalize()
 
 
 // removes loop between last state and some intermediate
-void simplify_path(std::vector<std::size_t>& path)
+void simplify_path(std::vector<State>& path)
 {
     if ((path.empty()) || (path.size() == 1)) {
         return;
     }
-
     // Check if last element exists already in path
     auto it = std::find(path.begin(), --path.end(), path.back());
 
@@ -382,7 +401,7 @@ void simplify_path(std::vector<std::size_t>& path)
 }
 
 //! add path to paths map
-void Pathfinder::add_path(std::vector<std::size_t> path,
+void Pathfinder::add_path(std::vector<State> path,
                           double val,
                           std::size_t threshold)
 {
@@ -398,7 +417,7 @@ void Pathfinder::add_path(std::vector<std::size_t> path,
     if (it != this->paths.end()){
         it->second += val;
     } else {
-        if (this->paths.size() < threshold) {
+        if (this->paths.size() <= threshold) {
             this->paths[path] = val;
         } else {
             this->minor_pathways += val;
@@ -408,9 +427,9 @@ void Pathfinder::add_path(std::vector<std::size_t> path,
 }
 
 //! add path to paths map
-void Pathfinder::add_time(std::vector<std::size_t> path,
+void Pathfinder::add_time(std::vector<State> path,
                           double prob,
-                          std::size_t time,
+                          double time,
                           std::size_t threshold)
 {
     if (isWeight) {
@@ -420,8 +439,10 @@ void Pathfinder::add_time(std::vector<std::size_t> path,
     if (it != this->mean_wt.end()){
         it->second += prob*time;
     } else {
-        if (this->mean_wt.size() < threshold) {
+        if (this->mean_wt.size() <= threshold) {
             this->mean_wt[path] = prob*time;
+        } else {
+            this->minor_pathways_wt += prob*time;
         }
     }
     return;
@@ -485,8 +506,12 @@ void Pathfinder::print(int number_of_pathways)
     // print general statistics
     std::cout << "    missed pathways [%]: "
               << this->missed_final << "\n"
-              << "    number of propagated steps: "
-              << this->propagated_steps << "\n"
+              << "    minor pathways [%]: "
+              << this->minor_pathways*100 << "\n"
+              << "    minor pathways wt [t_lag]: "
+              << this->minor_pathways_wt << "\n"
+              << "    waiting time [t_lag]: "
+              << this->waiting_time() << "\n"
               << "    propagated pathways: "
               << this->propagated_pathways << "\n"
               << "    number of different pathways: "
@@ -543,7 +568,9 @@ void Mcmc::print_stats()
 void Mcmc_single::print_stats()
 {
     // total counts are normalized to error+1, so total error is...
-    std::cout << "    stay in forbidden region [%]: "
+    std::cout << "    number of propagated steps: "
+              << this->propagated_steps << "\n"
+              << "    stay in forbidden region [%]: "
               << this->stay_in_forbidden_region  << "\n";
     return;
 }
@@ -568,7 +595,7 @@ void Pathfinder::clear()
     this->isWeight = false;
     this->minor_pathways = 0.;
     this->forbidden_pathways = 0.;
-    this->state_from = std::numeric_limits<std::size_t>::max();
+    this->state_from = std::numeric_limits<State>::max();
     this->propagated_steps = 0;
     this->propagated_pathways = 0;
     this->missed_final = 0.;
