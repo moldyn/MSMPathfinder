@@ -34,7 +34,7 @@ bool check_states_A(const std::vector<State> A, const std::string str_A,
 {
     // check if all values are legal and unique
     for (auto &state : A) {
-        // because of size_t < 0 is not possible
+        // because of State (unsigned int) < 0 is not possible
         if (state >= no_of_states) {
             std::cout << "    ERROR: state " << int(state)+1
                       << " in " << str_A << " is larger/smaller than matrix"
@@ -67,7 +67,7 @@ bool check_states_A(const std::vector<State> A, const std::string str_A,
 //! MAIN ROUTINE
 int main(int argc, char* argv[]){
     namespace b_po = boost::program_options;
-    std::string version_number = "v0.8";
+    std::string version_number = "v0.9";
     // generate header string
     std::string leading_whitespace(25 - (22 + version_number.size())/2, ' ');
     std::ostringstream header_ostring;

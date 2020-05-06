@@ -59,6 +59,7 @@ class Transition_matrix {
                          const State j);
 
         void set_keep_diag(const bool keep_diag) {this->keep_diag = keep_diag;}
+        bool get_keep_diag() {return this->keep_diag;}
 
         State get_no_of_states();
 

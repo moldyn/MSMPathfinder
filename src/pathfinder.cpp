@@ -99,7 +99,7 @@ Mcmc_single::~Mcmc_single() {}
 Pathfinder_tauij::~Pathfinder_tauij() {}
 
 // Propagate Paths
-void Mcmc::propagate_path()
+void Mcmc::propagate_path(double prob=1.)
 {
     // allocate memory for path initialize it
     std::vector<State> path;
@@ -130,13 +130,13 @@ void Mcmc::propagate_path()
 
             // check if reached forbidden state
             if (std::count(this->C.begin(), this->C.end(), next_state)) {
-                this->forbidden_pathways += 1.;
+                this->forbidden_pathways += prob/this->runs;
                 goto reached_final_state;
             }
             // check if reached final state
             if (std::count(this->B.begin(), this->B.end(), next_state)) {
-                this->add_path(path, 1./this->runs, -1);  //this->threshold);
-                this->add_time(path, 1./this->runs, step + 1, -1); //this->threshold);
+                this->add_path(path, prob/this->runs, -1);  //this->threshold);
+                this->add_time(path, prob/this->runs, step + 1, -1); //this->threshold);
                 this->propagated_pathways++;
                 goto reached_final_state;
             }
@@ -148,7 +148,7 @@ void Mcmc::propagate_path()
         }
 
         // did not reach one of the final states B
-        this->missed_final += 1.; ///this->runs;
+        this->missed_final += prob/this->runs; ///this->runs;
 
         // print missed pathways
 //        for (const auto& state : path) {
@@ -163,16 +163,16 @@ void Mcmc::propagate_path()
     eta_bar.close();
 
     // normalize missed final to percentage
-    this->missed_final *= 100./this->runs;
+    this->missed_final *= prob*100./this->runs;
 
     // normalize times
-    this->normalize_times();
+    //this->normalize_times();
 
     return;
 }
 
 // Propagate Paths
-void Mcmc_single::propagate_path()
+void Mcmc_single::propagate_path(double prob=1.)
 {
     // allocate memory for path initialize it
     std::vector<State> path;
@@ -247,12 +247,12 @@ void Mcmc_single::propagate_path()
     this->missed_final *= 100./(this->propagated_pathways + this->missed_final);
 
     // normalize times
-    this->normalize_times();
+    // this->normalize_times();
 
     return;
 }
 
-void Pathfinder_tauij::propagate_path()
+void Pathfinder_tauij::propagate_path(double prob=1.)
 {
    // allocate memory for path initialize it
     std::vector<State> path;
@@ -264,7 +264,6 @@ void Pathfinder_tauij::propagate_path()
     Pathfinder pathfinder_curr, pathfinder_prev;
 
     State current_state=this->state_from;
-    double prob = 1.;
     path.push_back(this->state_from);
 
     Progressspinner spinner(this->state_from+1, 100000);
@@ -291,10 +290,14 @@ void Pathfinder_tauij::propagate_path()
                     } else {
                         // check if returned to starting state
                         if (std::count(this->A.begin(), this->A.end(), state)) {
-                            path.clear();
+                         path.clear();
                         } else {
-                            path = paths_tuple.first;
+                         path = paths_tuple.first;
                         }
+                        // DEBUG
+                        //path = paths_tuple.first;
+                        // DEBUG
+
                         if ((path.size() == 0) || (state != path.back())) {
                             path.push_back(state);
                         }
@@ -329,10 +332,9 @@ void Pathfinder_tauij::propagate_path()
     pathfinder_prev.clear();
 
     // normalize times
-    this->normalize_times();
+    //this->normalize_times();
 
     spinner.close();
-
 
     return;
 }
@@ -348,6 +350,7 @@ double Pathfinder::waiting_time()
     return wt;
 }
 
+// TODO: add normalization to prob!=1.
 void Pathfinder::normalize_times()
 {
     // normalize waiting times
@@ -362,6 +365,7 @@ void Pathfinder::normalize_times()
 
 
 // normalize paths
+// TODO: add normalization to prob!=1.
 void Pathfinder::normalize()
 {
     double sum = 0;
@@ -376,6 +380,14 @@ void Pathfinder::normalize()
         }
         this->minor_pathways /= sum;
         this->forbidden_pathways /= sum;
+
+        // normalize times
+        for (auto& path : this->mean_wt) {
+            path.second /= sum * this->paths[path.first];
+        }
+        if (this->minor_pathways > 0) {
+            this->minor_pathways_wt /= sum * this->minor_pathways;
+        }
     }
     return;
 }

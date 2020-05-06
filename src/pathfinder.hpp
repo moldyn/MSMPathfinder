@@ -63,7 +63,7 @@ class Pathfinder {
         //! normalize the probability of all time to 1
         void normalize_times();
         //! propagate path
-        virtual void propagate_path() {return;};
+        virtual void propagate_path(double prob) {return;};
         //! remove unlikely paths with probability lower than cut-off
         void remove_unlikely_paths();
         //! add path to this->paths map
@@ -108,7 +108,7 @@ class Mcmc : public Pathfinder {
 
         // methods
         //! propagate path
-        void propagate_path();
+        void propagate_path(double prob);
     protected:
         //! print statistics of pathways
         void print_stats();
@@ -137,7 +137,7 @@ class Mcmc_single : public Pathfinder {
 
         // methods
         //! propagate path
-        void propagate_path();
+        void propagate_path(double prob);
     protected:
         //! print statistics of pathways
         void print_stats();
@@ -167,7 +167,7 @@ class Pathfinder_tauij : public Pathfinder {
 
         // methods
         //! propagate path
-        void propagate_path();
+        void propagate_path(double prob);
     protected:
         //! print statistics of pathways
         void print_stats();

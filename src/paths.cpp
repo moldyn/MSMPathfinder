@@ -16,19 +16,43 @@
 //#include <omp.h>
 
 //! Get paths from all states a in A to B
-void generate_pathfinders(const Mode mode,
-                          Pathfinder_map &pathfinders,
-                          const std::vector<State> &A,
-                          const std::vector<State> &B,
-                          const std::vector<State> &C,
-                          const Transition_matrix &T,
-                          const std::size_t steps,
-                          const std::size_t total_steps,
-                          const std::size_t iterations,
-                          const double cut_off,
-                          const std::size_t threshold,
-                          const bool isWeight,
-                          const bool normalize){
+void generate_pathfinders(Pathfinder* pathfinder,
+                          Weights &weights_A){
+    // generate mode specific class
+    //TODO: move state_from to propagate_path function
+    //TODO: remove from constructor
+    // propagate pathways from all initial states
+//    for(std::vector<State>::size_type i=0; i != A.size(); i++) {
+    for (const auto &weight_tuple: weights_A) {
+        // set initial state
+        pathfinder->state_from = weight_tuple.first;
+
+        double prob = weight_tuple.second;
+
+        // propagete pathways
+        pathfinder->propagate_path(prob);
+        pathfinder->remove_unlikely_paths();
+    }
+
+    pathfinder->normalize();
+
+    return;
+}
+
+
+//! Get paths from all states a in A to B
+void propagate_weights(Pathfinder_map &pathfinders,
+                       const std::vector<State> &A,
+                       const std::vector<State> &B,
+                       const std::vector<State> &C,
+                       const Transition_matrix &T,
+                       const double cut_off=0,
+                       const std::size_t iterations=100000000,
+                       const Mode mode=MCMC){
+    const bool isWeight = true;
+    const std::size_t steps = -1;
+    const std::size_t threshold = -1;
+
     // set up all pathfinders to be propagated
     for(std::vector<State>::size_type i=0; i != A.size(); i++) {
         // generate mode specific class
@@ -43,11 +67,6 @@ void generate_pathfinders(const Mode mode,
                     pathfinders[A[i]] = new Mcmc(T, A, B, C, A[i], steps, threshold, isWeight, iterations);
                 }
                 break;
-            case MCMCSINGLE:
-                if (i==0) {
-                    pathfinders[A[i]] = new Mcmc_single(T, A, B, C, A[i], steps, threshold, isWeight, total_steps);
-                }
-                break;
             default:
                 std::cerr << "    ERROR: unknown mode. this should never happen."
                           << std::endl;
@@ -55,19 +74,10 @@ void generate_pathfinders(const Mode mode,
         }
     }
 
-    // propagate pathways
+    // propagate pathways and normalize them
     for (const auto pathfinder_tuple: pathfinders) {
-        pathfinder_tuple.second->propagate_path();
-//        std::cout << "                 unique pathways: "
-//                  << pathfinder_tuple.second->paths.size();
-        pathfinder_tuple.second->remove_unlikely_paths();
-//        std::cout << "/" << pathfinder_tuple.second->paths.size()
-//                  << " with "
-//                  << 100.*(1.-pathfinder_tuple.second->minor_pathways)
-//                  << "%" <<std::endl;
-        if (normalize) {
-            pathfinder_tuple.second->normalize();
-        }
+        pathfinder_tuple.second->propagate_path(1.);
+        pathfinder_tuple.second->normalize();
     }
     return;
 }
@@ -87,96 +97,31 @@ int run_paths(Mode mode,
               std::size_t threshold,
               int argc, char* argv[]){
 
-    Pathfinder_map pathfinders_from_A;
+
     Pathfinder_map pathfinders_from_A_weights, pathfinders_from_B_weights;
-
-    // loop over all a in A
-    std::cout << "~~~ Get paths from initial states" << std::endl;
-
-    // start timer
-    std::chrono::steady_clock::time_point t_start, t_end;
-    t_start = std::chrono::steady_clock::now();
-
-    generate_pathfinders(mode,
-                         pathfinders_from_A,
-                         A, B, C, T,
-                         steps,
-                         total_steps,
-                         iterations,
-                         cut_off,
-                         threshold,
-                         false,
-                         false);
-
-    // TODO:DEBUG
-//    for(const auto &pathfinder_tuple: pathfinders_from_A) {
-//        std::cout << "~~~ Paths from state: " << pathfinder_tuple.first << std::endl;
-//        pathfinder_tuple.second->print();
-//    }
-    // END DEBUG
-
     // needed to calculate weights
+    // MCMC mode because of better initial convergence
     if ((A.size() > 1) && (mode != MCMCSINGLE)) {
         // remove diagonal
+        bool keep_diag = T.get_keep_diag();
         T.set_keep_diag(false);
+
         std::cout << "\n~~~ Get paths for N->infty for weighting" << std::endl;
         if (B.size() > 1) {
-            // MCMC mode because of better initial convergence
-           generate_pathfinders(MCMC,
-                                pathfinders_from_A_weights,
-                                A, B, C, T,
-                                -1,  // fixed number of steps
-                                0,//total_steps/10,
-                                100000000,  //iterations/10,
-                                0,  //cut_off*10,
-                                threshold,
-                                true,
-                                true);
-             // generate_pathfinders(PATHS,
-             //                      pathfinders_from_A_weights,
-             //                      A, B, C, T,
-             //                      -1,  // fixed number of steps
-             //                      0,//total_steps/10,
-             //                      0,  //iterations/10,
-             //                      0.00000000001,  //cut_off*10,
-             //                      threshold,
-             //                      true,
-             //                      true);
+            propagate_weights(pathfinders_from_A_weights, A, B, C, T);
         }
-        // MCMC mode because of better initial convergence
-        generate_pathfinders(MCMC,
-                             pathfinders_from_B_weights,
-                             B, A, C, T,
-                             -1,  // fixed number of steps
-                             0,//total_steps/10,
-                             100000000,  //iterations/10,
-                             0,  //cut_off*10,
-                             threshold,
-                             true,
-                             true);
-          // generate_pathfinders(PATHS,
-          //                      pathfinders_from_B_weights,
-          //                      B, A, C, T,
-          //                      -1,  // fixed number of steps
-          //                      0,//total_steps/10,
-          //                      0,  //iterations/10,
-          //                      0.00000000001,  //cut_off*10,
-          //                      threshold,
-          //                      true,
-          //                      true);
-        // TODO:DEBUG
-//        for(const auto &pathfinder_tuple: pathfinders_from_B) {
-//            std::cout << "~~~ Paths from state: " << pathfinder_tuple.first << std::endl;
-//            pathfinder_tuple.second->print();
-//        }
-        // END DEBUG
+        propagate_weights(pathfinders_from_B_weights, B, A, C, T);
+
+        // restore diagonal setting
+        T.set_keep_diag(keep_diag);
     }
 
     // calculate weights
+    // TODO: use matrix form
     Weights weights_A;
     if ((A.size() > 1) && (B.size() == 1) && (mode != MCMCSINGLE)) {
         // initialize weights with a zeros
-        for (const auto& state: A) {
+        for (const auto &state: A) {
             weights_A[state] = 0.;
         }
         // get weights
@@ -189,10 +134,10 @@ int run_paths(Mode mode,
         std::cout << "\n" << std::endl;
         // initialize weights equally
         Weights weights_B, prev_weights_A;
-        for (const auto& state: A) {
+        for (const auto &state: A) {
             weights_A[state] = 1./A.size();
         }
-        for (const auto& state: B) {
+        for (const auto &state: B) {
             weights_B[state] = 1./B.size();
         }
 
@@ -270,11 +215,54 @@ int run_paths(Mode mode,
                   << " with error " << diff << std::endl;
 
     } else {
-        for (const auto &pathfinder_tuple: pathfinders_from_A) {
-            weights_A[pathfinder_tuple.first] = 1.;
+        for (const auto &state: A) {
+            weights_A[state] = 1.;
         }
     }
 
+
+    // loop over all a in A
+    std::cout << "~~~ Get paths from initial states" << std::endl;
+
+    // start timer
+    std::chrono::steady_clock::time_point t_start, t_end;
+    t_start = std::chrono::steady_clock::now();
+
+    Pathfinder* pathfinder_from_A;
+    const bool isWeight = false;
+    switch(mode){
+        case PATHS:
+            {
+                pathfinder_from_A = new Pathfinder_tauij(T, A, B, C, A[0], steps, threshold, isWeight, cut_off);
+            }
+            break;
+        case MCMC:
+            {
+                pathfinder_from_A = new Mcmc(T, A, B, C, A[0], steps, threshold, isWeight, iterations);
+            }
+            break;
+        case MCMCSINGLE:
+            {
+                pathfinder_from_A = new Mcmc_single(T, A, B, C, A[0], steps, threshold, isWeight, total_steps);
+            }
+            break;
+        default:
+            std::cerr << "    ERROR: unknown mode. this should never happen."
+                      << std::endl;
+            std::exit(EXIT_FAILURE);
+    }
+
+    // generate mode specific class
+    generate_pathfinders(pathfinder_from_A,
+                         weights_A);
+
+    // TODO:DEBUG
+//    for(const auto &pathfinder_tuple: pathfinders_from_A) {
+
+//        std::cout << "~~~ Paths from state: " << pathfinder_tuple.first << std::endl;
+//        pathfinder_tuple.second->print();
+//    }
+    // END DEBUG
     // free memory of weight calculations
 //    for (auto pathfinder_tuple: pathfinders_from_A_weights) {
 //        delete pathfinder_tuple.second;
@@ -284,67 +272,67 @@ int run_paths(Mode mode,
 //    }
 
     // merge weights into final paths
-    Pathfinder* paths_result;
-    switch(mode){
-        case PATHS:
-            {
-                paths_result = new Pathfinder_tauij();
-            }
-            break;
-        case MCMC:
-            {
-                paths_result = new Mcmc();
-            }
-            break;
-        case MCMCSINGLE:
-            {
-                paths_result = new Mcmc_single();
-            }
-            break;
-        default:
-            std::cerr << "    ERROR: unknown mode. this should never happen."
-                      << std::endl;
-            return EXIT_FAILURE;
-    }
-
-    for (const auto &pathfinder_tuple: pathfinders_from_A) {
-        for (const auto &path_tuple: pathfinder_tuple.second->paths) {
-            paths_result->add_path(path_tuple.first,
-                                   path_tuple.second*weights_A[pathfinder_tuple.first],
-                                   threshold);
-            paths_result->add_time(path_tuple.first,
-                                   path_tuple.second*weights_A[pathfinder_tuple.first],
-                                   pathfinder_tuple.second->mean_wt[path_tuple.first],
-                                   threshold);
-        }
-        paths_result->propagated_steps +=
-            pathfinder_tuple.second->propagated_steps;
-        paths_result->minor_pathways +=
-            pathfinder_tuple.second->minor_pathways*weights_A[pathfinder_tuple.first];
-        paths_result->minor_pathways_wt +=
-            pathfinder_tuple.second->minor_pathways*pathfinder_tuple.second->minor_pathways_wt*weights_A[pathfinder_tuple.first];
-        paths_result->missed_final +=
-            pathfinder_tuple.second->missed_final*weights_A[pathfinder_tuple.first];
-        paths_result->propagated_pathways +=
-            pathfinder_tuple.second->propagated_pathways;
-        switch(mode){
-            case PATHS:
-                static_cast<Pathfinder_tauij*>(paths_result)->error +=
-                    static_cast<Pathfinder_tauij*>(pathfinder_tuple.second)->error
-                        *weights_A[pathfinder_tuple.first];
-                break;
-            case MCMC:
-                break;
-            case MCMCSINGLE:
-                static_cast<Mcmc_single*>(paths_result)->stay_in_forbidden_region +=
-                    static_cast<Mcmc_single*>(pathfinder_tuple.second)->stay_in_forbidden_region;
-                break;
-            default:
-                std::cerr << "    ERROR: unknown mode. this should never happen."
-                          << std::endl;
-                return EXIT_FAILURE;
-        }
-    }
+//     Pathfinder* paths_result;
+//     switch(mode){
+//         case PATHS:
+//             {
+//                 paths_result = new Pathfinder_tauij();
+//             }
+//             break;
+//         case MCMC:
+//             {
+//                 paths_result = new Mcmc();
+//             }
+//             break;
+//         case MCMCSINGLE:
+//             {
+//                 paths_result = new Mcmc_single();
+//             }
+//             break;
+//         default:
+//             std::cerr << "    ERROR: unknown mode. this should never happen."
+//                       << std::endl;
+//             return EXIT_FAILURE;
+//     }
+//
+//     for (const auto &pathfinder_tuple: pathfinders_from_A) {
+//         for (const auto &path_tuple: pathfinder_tuple.second->paths) {
+//             paths_result->add_path(path_tuple.first,
+//                                    path_tuple.second*weights_A[pathfinder_tuple.first],
+//                                    threshold);
+//             paths_result->add_time(path_tuple.first,
+//                                    path_tuple.second*weights_A[pathfinder_tuple.first],
+//                                    pathfinder_tuple.second->mean_wt[path_tuple.first],
+//                                    threshold);
+//         }
+//         paths_result->propagated_steps +=
+//             pathfinder_tuple.second->propagated_steps;
+//         paths_result->minor_pathways +=
+//             pathfinder_tuple.second->minor_pathways*weights_A[pathfinder_tuple.first];
+//         paths_result->minor_pathways_wt +=
+//             pathfinder_tuple.second->minor_pathways*pathfinder_tuple.second->minor_pathways_wt*weights_A[pathfinder_tuple.first];
+//         paths_result->missed_final +=
+//             pathfinder_tuple.second->missed_final*weights_A[pathfinder_tuple.first];
+//         paths_result->propagated_pathways +=
+//             pathfinder_tuple.second->propagated_pathways;
+//         switch(mode){
+//             case PATHS:
+//                 static_cast<Pathfinder_tauij*>(paths_result)->error +=
+//                     static_cast<Pathfinder_tauij*>(pathfinder_tuple.second)->error
+//                         *weights_A[pathfinder_tuple.first];
+//                 break;
+//             case MCMC:
+//                 break;
+//             case MCMCSINGLE:
+//                 static_cast<Mcmc_single*>(paths_result)->stay_in_forbidden_region +=
+//                     static_cast<Mcmc_single*>(pathfinder_tuple.second)->stay_in_forbidden_region;
+//                 break;
+//             default:
+//                 std::cerr << "    ERROR: unknown mode. this should never happen."
+//                           << std::endl;
+//                 return EXIT_FAILURE;
+//         }
+//     }
 
     // free memory of weight calculations
 //    for (auto pathfinder_tuple: pathfinders_from_A) {
@@ -352,20 +340,19 @@ int run_paths(Mode mode,
 //    }
 
     std::cout<< "\n\n~~~ FINAL PATHWAYS:" << std::endl;
-    paths_result->normalize_times();
-    paths_result->normalize();
-    paths_result->print();
+    //pathfinder_from_A->normalize_times();
+    //pathfinder_from_A->normalize();
+    pathfinder_from_A->print();
 
-    //TODO: end timer
     t_end = std::chrono::steady_clock::now();
     float t_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(t_end-t_start).count()/1000.;
 
 
-    // TODO: store results
+    //TODO: use same function for print and storing
     if( output[0] != '\0' ) {  // check if string is non empty
         // sort
         Paths_sorted final_paths_sorted;
-        for (const auto &path_tuple: paths_result->paths) {
+        for (const auto &path_tuple: pathfinder_from_A->paths) {
             final_paths_sorted.insert({path_tuple.second, path_tuple.first});
         }
 
@@ -394,24 +381,24 @@ int run_paths(Mode mode,
                     break;
                 case PATHS:
                     output_file << "# undiscovered pathspace [%]: "
-                                << 100*static_cast<Pathfinder_tauij*>(paths_result)->error
+                                << 100*static_cast<Pathfinder_tauij*>(pathfinder_from_A)->error
                                 << "\n";
                     break;
             }
   	        output_file << "# minor pathways [%]: "
-                        << 100*paths_result->minor_pathways << "\n"
+                        << 100*pathfinder_from_A->minor_pathways << "\n"
                         << "# minor pathways wt [t_lag]: "
-                        << paths_result->minor_pathways_wt << "\n"
+                        << pathfinder_from_A->minor_pathways_wt << "\n"
                         << "# missed pathways [%]: "
-                        << paths_result->missed_final << "\n"
+                        << pathfinder_from_A->missed_final << "\n"
                         << "# number of propagated steps: "
-                        << paths_result->propagated_steps << "\n"
+                        << pathfinder_from_A->propagated_steps << "\n"
                         << "# propagated pathways: "
-                        << paths_result->propagated_pathways << "\n"
+                        << pathfinder_from_A->propagated_pathways << "\n"
                         << "# waiting time [t_lag]: "
-                        << paths_result->waiting_time() << "\n"
+                        << pathfinder_from_A->waiting_time() << "\n"
                         << "# number of different pathways: "
-                        << paths_result->paths.size() << "\n"
+                        << pathfinder_from_A->paths.size() << "\n"
                         << "# elapsed time [s]: "
                         << t_elapsed << "\n"
         	            << "# count [%]  total [%] time [t_lag] pathway\n";
@@ -426,7 +413,7 @@ int run_paths(Mode mode,
                 count += 100*it_r->first;
                 output_file << 100*it_r->first << " "
                             << count << " "
-                            << paths_result->mean_wt[it_r->second] << " ";
+                            << pathfinder_from_A->mean_wt[it_r->second] << " ";
                 for (const auto& state : it_r->second) {
                     output_file << state+1 << " ";
                 }

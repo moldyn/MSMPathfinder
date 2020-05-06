@@ -14,19 +14,20 @@
 
 //#include <exception>
 //#include <omp.h>
-void generate_pathfinders(const Mode mode,
-                          Pathfinder_map &pathfinders,
-                          const std::vector<State> &A,
-                          const std::vector<State> &B,
-                          const std::vector<State> &C,
-                          const Transition_matrix &T,
-                          const std::size_t steps,
-                          const std::size_t total_steps,
-                          const std::size_t iterations,
-                          const double cut_off,
-                          const std::size_t threshold,
-                          const bool isWeight,
-                          const bool normalize);
+void generate_pathfinders(Pathfinder* pathfinder,
+                          Weights &weights_A);
+
+//! propagate infinitly long trajectories for calculating the weights
+void propagate_weights(Pathfinder_map &pathfinders,
+                       const std::vector<State> &A,
+                       const std::vector<State> &B,
+                       const std::vector<State> &C,
+                       const Transition_matrix &T,
+                       const double cut_off,
+                       const std::size_t iterations,
+                       const Mode mode);
+
+//! run main logic
 int run_paths(Mode mode,
               std::vector<State> A,
               std::vector<State> B,
