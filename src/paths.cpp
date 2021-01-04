@@ -215,9 +215,7 @@ int run_paths(Mode mode,
                   << " with error " << diff << std::endl;
 
     } else {
-        for (const auto &state: A) {
-            weights_A[state] = 1.;
-        }
+        weights_A[A[0]] = 1.;
     }
 
 
@@ -256,92 +254,7 @@ int run_paths(Mode mode,
     generate_pathfinders(pathfinder_from_A,
                          weights_A);
 
-    // TODO:DEBUG
-//    for(const auto &pathfinder_tuple: pathfinders_from_A) {
-
-//        std::cout << "~~~ Paths from state: " << pathfinder_tuple.first << std::endl;
-//        pathfinder_tuple.second->print();
-//    }
-    // END DEBUG
-    // free memory of weight calculations
-//    for (auto pathfinder_tuple: pathfinders_from_A_weights) {
-//        delete pathfinder_tuple.second;
-//    }
-//    for (auto pathfinder_tuple: pathfinders_from_B_weights) {
-//        delete pathfinder_tuple.second;
-//    }
-
-    // merge weights into final paths
-//     Pathfinder* paths_result;
-//     switch(mode){
-//         case PATHS:
-//             {
-//                 paths_result = new Pathfinder_tauij();
-//             }
-//             break;
-//         case MCMC:
-//             {
-//                 paths_result = new Mcmc();
-//             }
-//             break;
-//         case MCMCSINGLE:
-//             {
-//                 paths_result = new Mcmc_single();
-//             }
-//             break;
-//         default:
-//             std::cerr << "    ERROR: unknown mode. this should never happen."
-//                       << std::endl;
-//             return EXIT_FAILURE;
-//     }
-//
-//     for (const auto &pathfinder_tuple: pathfinders_from_A) {
-//         for (const auto &path_tuple: pathfinder_tuple.second->paths) {
-//             paths_result->add_path(path_tuple.first,
-//                                    path_tuple.second*weights_A[pathfinder_tuple.first],
-//                                    threshold);
-//             paths_result->add_time(path_tuple.first,
-//                                    path_tuple.second*weights_A[pathfinder_tuple.first],
-//                                    pathfinder_tuple.second->mean_wt[path_tuple.first],
-//                                    threshold);
-//         }
-//         paths_result->propagated_steps +=
-//             pathfinder_tuple.second->propagated_steps;
-//         paths_result->minor_pathways +=
-//             pathfinder_tuple.second->minor_pathways*weights_A[pathfinder_tuple.first];
-//         paths_result->minor_pathways_wt +=
-//             pathfinder_tuple.second->minor_pathways*pathfinder_tuple.second->minor_pathways_wt*weights_A[pathfinder_tuple.first];
-//         paths_result->missed_final +=
-//             pathfinder_tuple.second->missed_final*weights_A[pathfinder_tuple.first];
-//         paths_result->propagated_pathways +=
-//             pathfinder_tuple.second->propagated_pathways;
-//         switch(mode){
-//             case PATHS:
-//                 static_cast<Pathfinder_tauij*>(paths_result)->error +=
-//                     static_cast<Pathfinder_tauij*>(pathfinder_tuple.second)->error
-//                         *weights_A[pathfinder_tuple.first];
-//                 break;
-//             case MCMC:
-//                 break;
-//             case MCMCSINGLE:
-//                 static_cast<Mcmc_single*>(paths_result)->stay_in_forbidden_region +=
-//                     static_cast<Mcmc_single*>(pathfinder_tuple.second)->stay_in_forbidden_region;
-//                 break;
-//             default:
-//                 std::cerr << "    ERROR: unknown mode. this should never happen."
-//                           << std::endl;
-//                 return EXIT_FAILURE;
-//         }
-//     }
-
-    // free memory of weight calculations
-//    for (auto pathfinder_tuple: pathfinders_from_A) {
-//        delete pathfinder_tuple.second;
-//    }
-
     std::cout<< "\n\n~~~ FINAL PATHWAYS:" << std::endl;
-    //pathfinder_from_A->normalize_times();
-    //pathfinder_from_A->normalize();
     pathfinder_from_A->print();
 
     t_end = std::chrono::steady_clock::now();
