@@ -17,7 +17,7 @@ The essential functions are:
 
 
 # Documentation
-All options are well documented and may be viewed by 'MSMPathfinder -h'.
+All options are well documented and may be viewed by `MSMPathfinder -h`.
 
 
 # Citations
