@@ -1,0 +1,34 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Nagel"
+  given-names: "Daniel"
+  orcid: "https://orcid.org/0000-0002-2863-2646"
+- family-names: "Weber"
+  given-names: "Anna"
+- family-names: "Stock"
+  given-names: "Gerhard"
+  orcid: "https://orcid.org/0000-0002-3302-3044"
+title: "MSMPathfinder"
+version: 0.9.0
+url: "https://github.com/moldyn/MSMPathfinder"
+preferred-citation:
+  type: article
+  authors:
+  - family-names: "Nagel"
+    given-names: "Daniel"
+    orcid: "https://orcid.org/0000-0002-2863-2646"
+  - family-names: "Weber"
+    given-names: "Anna"
+  - family-names: "Stock"
+    given-names: "Gerhard"
+    orcid: "https://orcid.org/0000-0002-3302-3044"
+  doi: "10.1021/acs.jctc.0c00774"
+  journal: "Journal of Chemical Theory and Computation"
+  month: 11
+  start: 7874
+  end: 7882
+  title: "My awesome research software"
+  issue: 12
+  volume: 16
+  year: 2020
